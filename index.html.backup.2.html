@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <meta name="description" content="A web application that allows users to play Spotify tracks using numerical codes">
+    <title>Jukebox Web App</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://sdk.scdn.co/spotify-player.js"></script>
+    <script>
+        window.onSpotifyWebPlaybackSDKReady = () => {
+            console.log('Spotify Web Playback SDK Ready');
+        };
+    </script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Jukebox Web App</h1>
+        </header>
+
+        <main>
+            <!-- Player View (Initially Visible) -->
+            <section id="player-view" class="view active">
+                <div class="code-input-container">
+                    <h2>Enter Your 10-Digit Code</h2>
+                    <div class="code-input-area">
+                        <input type="text" id="code-input" class="code-input" maxlength="10" placeholder="1234567890" autocomplete="off">
+                        <div class="feedback-area" id="feedback-area"></div>
+                        <div class="button-container">
+                            <button id="submit-code" class="code-button submit-button">Play</button>
+                            <button id="clear-code" class="code-button clear-button">Clear</button>
+                        </div>
+                    </div>
+                    <div class="player-container">
+                        <div id="spotify-player-ui" class="spotify-player">
+                            <div id="player-error-message" class="player-message"></div>
+                            <div id="album-art" class="album-art">
+                                <img src="placeholder-album.jpg" alt="Album Artwork" class="artwork-img">
+                            </div>
+                            <div id="track-info" class="track-info">
+                                <div id="track-name" class="track-name">No track playing</div>
+                                <div id="artist-name" class="artist-name">Select a track to play</div>
+                            </div>
+                            <div class="player-controls">
+                                <button id="play-pause-button" class="control-button play-button" disabled>
+                                    <span class="play-icon">▶</span>
+                                    <span class="pause-icon" style="display:none;">❚❚</span>
+                                </button>
+                                <div class="progress-container">
+                                    <div id="current-time" class="time-display">0:00</div>
+                                    <div class="progress-bar-container">
+                                        <div id="progress-bar" class="progress-bar"></div>
+                                    </div>
+                                    <div id="total-time" class="time-display">0:00</div>
+                                </div>
+                                <div class="volume-container">
+                                    <label for="volume-control" class="volume-icon">🔊</label>
+                                    <input type="range" id="volume-control" class="volume-control" min="0" max="100" value="80">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Admin View (Initially Hidden) -->
+            <section id="admin-view" class="view">
+                <div class="admin-container">
+                    <h2>Admin: Code Management</h2>
+                    
+                    <!-- Spotify Authentication Section -->
+                    <div class="admin-section spotify-auth-container">
+                        <h3>Spotify Authentication</h3>
+                        <div class="spotify-auth-status">
+                            <p id="spotify-status-message"><span class="status-icon disconnected"></span> Not connected to Spotify</p>
+                            <div class="auth-buttons">
+                                <button id="spotify-login-btn" class="admin-button spotify-button">Connect to Spotify</button>
+                                <button id="spotify-logout-btn" class="admin-button spotify-button" style="display: none;">Disconnect</button>
+                            </div>
+                            <div id="spotify-auth-feedback" class="auth-feedback"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="code-management">
+                        <!-- Add New Code Mapping Form -->
+                        <div class="admin-section mapping-form-container">
+                            <h3>Add New Code Mapping</h3>
+                            <form id="mapping-form">
+                                <div class="form-group">
+                                    <label for="code-input-admin">10-Digit Code:</label>
+                                    <input type="text" id="code-input-admin" class="admin-input" maxlength="10" placeholder="1234567890" required>
+                                    <div class="input-feedback" id="code-feedback"></div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="track-uri-input">Spotify Track URI or URL:</label>
+                                    <div class="input-with-button">
+                                        <input type="text" id="track-uri-input" class="admin-input" placeholder="spotify:track:4iV5W9uYEdYUVa79Axb7Rh or https://open.spotify.com/track/4iV5W9uYEdYUVa79Axb7Rh" required>
+                                        <button type="button" id="get-track-info-btn" class="admin-button spotify-button">Get Track Info</button>
+                                    </div>
+                                    <div class="input-helper">Paste either a Spotify URI or a Spotify track URL</div>
+                                    <div class="input-feedback" id="uri-feedback"></div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="track-name-input">Track Name:</label>
+                                    <input type="text" id="track-name-input" class="admin-input" placeholder="Song Name" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="artist-name-input">Artist Name:</label>
+                                    <input type="text" id="artist-name-input" class="admin-input" placeholder="Artist Name" required>
+                                </div>
+                                <div class="form-buttons">
+                                    <button type="submit" id="save-mapping-btn" class="admin-button save-button">Save Mapping</button>
+                                    <button type="button" id="clear-form-btn" class="admin-button clear-button">Clear Form</button>
+                                </div>
+                                <div id="form-feedback" class="form-feedback"></div>
+                            </form>
+                        </div>
+
+                        <!-- Existing Mappings List -->
+                        <div class="admin-section mappings-list-container">
+                            <h3>Existing Code Mappings</h3>
+                            <div class="mappings-controls">
+                                <div class="search-container">
+                                    <input type="text" id="search-input" class="admin-input" placeholder="Search...">
+                                </div>
+                                <button id="refresh-list-btn" class="admin-button refresh-button">Refresh List</button>
+                            </div>
+                            <div class="mappings-table-container">
+                                <table id="mappings-table" class="mappings-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Code</th>
+                                            <th>Track Name</th>
+                                            <th>Artist</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="mappings-list">
+                                        <!-- Mappings will be inserted here dynamically -->
+                                    </tbody>
+                                </table>
+                                <div id="no-mappings-message" class="no-data-message">No code mappings found.</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Edit Mapping Modal -->
+                <div id="edit-modal" class="modal">
+                    <div class="modal-content">
+                        <span class="close-modal">&times;</span>
+                        <h3>Edit Code Mapping</h3>
+                        <form id="edit-mapping-form">
+                            <input type="hidden" id="edit-original-code">
+                            <div class="form-group">
+                                <label for="edit-code-input">10-Digit Code:</label>
+                                <input type="text" id="edit-code-input" class="admin-input" maxlength="10" placeholder="1234567890" required>
+                                <div class="input-feedback" id="edit-code-feedback"></div>
+                            </div>
+                            <div class="form-group">
+                                <label for="edit-track-uri-input">Spotify Track URI or URL:</label>
+                                <div class="input-with-button">
+                                    <input type="text" id="edit-track-uri-input" class="admin-input" placeholder="spotify:track:4iV5W9uYEdYUVa79Axb7Rh or https://open.spotify.com/track/4iV5W9uYEdYUVa79Axb7Rh" required>
+                                    <button type="button" id="edit-get-track-info-btn" class="admin-button spotify-button">Get Track Info</button>
+                                </div>
+                                <div class="input-helper">Paste either a Spotify URI or a Spotify track URL</div>
+                                <div class="input-feedback" id="edit-uri-feedback"></div>
+                            </div>
+                            <div class="form-group">
+                                <label for="edit-track-name-input">Track Name:</label>
+                                <input type="text" id="edit-track-name-input" class="admin-input" placeholder="Song Name" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="edit-artist-name-input">Artist Name:</label>
+                                <input type="text" id="edit-artist-name-input" class="admin-input" placeholder="Artist Name" required>
+                            </div>
+                            <div class="form-buttons">
+                                <button type="submit" id="update-mapping-btn" class="admin-button save-button">Update Mapping</button>
+                                <button type="button" id="cancel-edit-btn" class="admin-button cancel-button">Cancel</button>
+                            </div>
+                            <div id="edit-form-feedback" class="form-feedback"></div>
+                        </form>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <footer>
+            <div class="view-toggle-container">
+                <button id="view-toggle">Switch to Admin View</button>
+            </div>
+        </footer>
+    </div>
+    
+    <script src="app.js"></script>
+</body>
+</html> 

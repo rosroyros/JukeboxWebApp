@@ -1,0 +1,73 @@
+# Jukebox Web App - Product Requirements Document
+
+## Overview
+The Jukebox Web App is a simple, single-page web application designed for toddlers to play Spotify tracks by entering 3-digit codes. The app includes a minimal admin interface for mapping codes to tracks and a Spotify player for playback.
+
+## Target Users
+- **Primary Users**: Toddlers who can recognize and input 3-digit numbers
+- **Secondary Users**: Parents/guardians who will configure the code-to-track mappings
+
+## Core Features
+
+### 1. User Interface
+- **Code Input Area**: 
+  - Simple text input field limited to 3 digits
+  - Submit button to trigger playback (with option for auto-submit)
+  - Clear visual feedback for successful/failed code entry
+
+- **Spotify Player**:
+  - Embedded Spotify Web Playback SDK player
+  - Auto-plays the track after valid code entry
+  - Plays the full track (not just previews)
+
+### 2. Admin Interface
+- **Code Management**:
+  - Simple form to manually enter 3-digit codes and corresponding Spotify track URIs
+  - Option to add optional track name and artist name for reference
+  - List of existing code-to-track mappings
+  - Basic edit and delete functionality for existing mappings
+
+### 3. Storage
+- All code-to-track mappings stored in browser Local Storage
+- No database or server-side storage required
+
+## Technical Requirements
+
+### 1. Spotify Integration
+- Requires a Spotify Premium account
+- Uses Spotify Web Playback SDK for full track playback
+- Implementation of token handling and authentication flow
+
+### 2. Platform and Browser Support
+- Desktop web browsers (Chrome, Firefox, Safari, Edge)
+- No specific mobile optimization required
+
+### 3. Technical Stack
+- Frontend: HTML, CSS, JavaScript (vanilla or minimal framework)
+- Storage: Local Storage
+- External Dependencies: Spotify Web Playback SDK
+
+## User Experience Requirements
+
+### 1. Player View
+- Clean, simple interface suitable for toddlers
+- Minimal distractions around the code input area
+- Clear visual/audio feedback on successful code entry
+
+### 2. Admin View
+- Straightforward interface for managing code mappings
+- Clear separation from the player interface (toggle or separate section)
+- Simple form for entering Spotify track URIs manually copied from Spotify
+
+## Non-Requirements (Explicitly Out of Scope)
+- User authentication or access control
+- Mobile-specific implementations
+- Spotify track search functionality within the app
+- Support for non-Premium Spotify accounts
+- Database or server-side storage
+
+## Success Criteria
+- Toddlers can successfully enter codes and play tracks
+- Admins can easily add and manage code-to-track mappings
+- Playback starts automatically after valid code entry
+- Full tracks play (not just previews) 
