@@ -1,0 +1,331 @@
+# <!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Financial Scenario Planner</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --danger: #dc2626;
+            --success: #16a34a;
+            --bg: #f8fafc;
+            --card: #ffffff;
+            --text: #1e293b;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .container {
+            max-width: 1000px;
+            width: 100%;
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .container { grid-template-columns: 1fr; }
+        }
+
+        .card {
+            background: var(--card);
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+        }
+
+        h1 { margin-top: 0; font-size: 1.5rem; color: var(--text); }
+        
+        .input-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            font-size: 0.875rem;
+            font-weight: 500;
+            margin-bottom: 5px;
+            color: #64748b;
+        }
+
+        input {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            font-size: 1rem;
+            box-sizing: border-box; 
+        }
+
+        input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .stat-box {
+            background: #f1f5f9;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 1.25rem;
+            font-weight: 700;
+            display: block;
+        }
+
+        .stat-label {
+            font-size: 0.75rem;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .positive { color: var(--success); }
+        .negative { color: var(--danger); }
+
+        canvas {
+            width: 100% !important;
+            height: 400px !important;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div class="card">
+            <h1>Parameters</h1>
+            
+            <div class="input-group">
+                <label>Starting Capital ($)</label>
+                <input type="number" id="capital" value="2000000" step="50000">
+            </div>
+
+            <div class="input-group">
+                <label>Annual Interest Rate (%)</label>
+                <input type="number" id="interest" value="4.0" step="0.1">
+            </div>
+
+            <div class="input-group">
+                <label>Monthly Spending (Start) ($)</label>
+                <input type="number" id="spending" value="30000" step="500">
+            </div>
+
+            <div class="input-group">
+                <label>Annual Inflation on Spending (%)</label>
+                <input type="number" id="inflation" value="0.0" step="0.1">
+            </div>
+
+            <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 20px 0;">
+
+            <div class="input-group">
+                <label>Income Phase 1 ($)</label>
+                <input type="number" id="income1" value="16000" step="500">
+            </div>
+
+            <div class="input-group">
+                <label>Income Phase 2 ($)</label>
+                <input type="number" id="income2" value="12000" step="500">
+            </div>
+
+            <div class="input-group">
+                <label>Income Drop Year</label>
+                <input type="number" id="dropYear" value="4" step="1">
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-box">
+                    <span class="stat-value" id="finalBalance">--</span>
+                    <span class="stat-label">Final Balance (Yr 20)</span>
+                </div>
+                <div class="stat-box">
+                    <span class="stat-value" id="depletionYear">--</span>
+                    <span class="stat-label">Depletion Year</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <canvas id="financeChart"></canvas>
+        </div>
+    </div>
+
+    <script>
+        let chartInstance = null;
+
+        // Configuration
+        const years = 20;
+        const months = years * 12;
+
+        function formatMoney(amount) {
+            return new Intl.NumberFormat('en-US', {
+                style: 'currency',
+                currency: 'USD',
+                maximumFractionDigits: 0
+            }).format(amount);
+        }
+
+        function calculateAndDraw() {
+            // Get inputs
+            const initialCapital = parseFloat(document.getElementById('capital').value);
+            const annualInterest = parseFloat(document.getElementById('interest').value) / 100;
+            const startSpending = parseFloat(document.getElementById('spending').value);
+            const inflationRate = parseFloat(document.getElementById('inflation').value) / 100;
+            const income1 = parseFloat(document.getElementById('income1').value);
+            const income2 = parseFloat(document.getElementById('income2').value);
+            const dropMonth = parseFloat(document.getElementById('dropYear').value) * 12;
+
+            const monthlyInterest = annualInterest / 12;
+            
+            let currentCapital = initialCapital;
+            let currentSpending = startSpending;
+            
+            const labels = [];
+            const data = [];
+            let depletionDate = null;
+
+            for (let m = 0; m <= months; m++) {
+                // Determine Year for axis and inflation
+                const currentYear = Math.floor(m / 12);
+                
+                // Record state at start of month
+                if (m % 12 === 0) { // Add data point once per year for cleaner chart, or every month
+                     // We will plot every year to keep it clean, or every 6 months
+                }
+                labels.push(m/12);
+                data.push(currentCapital);
+
+                if (currentCapital < 0 && depletionDate === null) {
+                    depletionDate = (m / 12).toFixed(1);
+                }
+
+                // Inflation logic: Spending increases once a year (at month 12, 24, etc)
+                if (m > 0 && m % 12 === 0) {
+                    currentSpending = currentSpending * (1 + inflationRate);
+                }
+
+                // Income logic
+                const currentIncome = (m < dropMonth) ? income1 : income2;
+
+                // Gap Calculation
+                const gap = currentSpending - currentIncome;
+
+                // Interest logic
+                const interestEarned = currentCapital * monthlyInterest;
+
+                // Update Capital
+                currentCapital = currentCapital + interestEarned - gap;
+            }
+
+            // Update Stats
+            const finalBalEl = document.getElementById('finalBalance');
+            finalBalEl.innerText = formatMoney(currentCapital);
+            finalBalEl.className = currentCapital >= 0 ? 'stat-value positive' : 'stat-value negative';
+
+            const depEl = document.getElementById('depletionYear');
+            depEl.innerText = depletionDate ? `Year ${depletionDate}` : 'Safe (20+ Yrs)';
+            depEl.className = depletionDate ? 'stat-value negative' : 'stat-value positive';
+
+            // Draw Chart
+            const ctx = document.getElementById('financeChart').getContext('2d');
+            
+            if (chartInstance) {
+                chartInstance.destroy();
+            }
+
+            chartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels.filter((_, i) => i % 6 === 0), // Show every 6 months on X axis
+                    datasets: [{
+                        label: 'Capital Balance',
+                        data: data.filter((_, i) => i % 6 === 0),
+                        borderColor: '#2563eb',
+                        backgroundColor: 'rgba(37, 99, 235, 0.1)',
+                        borderWidth: 3,
+                        pointRadius: 0,
+                        fill: true,
+                        tension: 0.4
+                    },
+                    {
+                        label: 'Zero Line',
+                        data: Array(data.filter((_, i) => i % 6 === 0).length).fill(0),
+                        borderColor: '#dc2626',
+                        borderWidth: 1,
+                        borderDash: [5, 5],
+                        pointRadius: 0,
+                        fill: false
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        intersect: false,
+                        mode: 'index',
+                    },
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.dataset.label || '';
+                                    if (label) {
+                                        label += ': ';
+                                    }
+                                    if (context.parsed.y !== null) {
+                                        label += new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(context.parsed.y);
+                                    }
+                                    return label;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            title: { display: true, text: 'Years' },
+                            grid: { display: false }
+                        },
+                        y: {
+                            ticks: {
+                                callback: function(value) {
+                                    return '$' + value / 1000000 + 'M';
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Attach listeners
+        const inputs = document.querySelectorAll('input');
+        inputs.forEach(input => {
+            input.addEventListener('input', calculateAndDraw);
+        });
+
+        // Initial Draw
+        calculateAndDraw();
+
+    </script>
+</body>
+</html>
